@@ -43,11 +43,15 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
     {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "collectionCell", for: indexPath) as! PhotoCell
         cell.backgroundColor = UIColor.green
-        guard let url = URL.init(string: self.urlArray[indexPath.row]),let data = try? Data(contentsOf: url) else {
-                return UICollectionViewCell()
-        }
-        DispatchQueue.main.async {
-            cell.imageView.image = UIImage(data: data)
+        DispatchQueue.global().async {
+            if let url = URL.init(string: self.urlArray[indexPath.row]),let data = try? Data(contentsOf: url),let image = UIImage(data: data) {
+                DispatchQueue.main.async {
+
+                    cell.imageView.image = image
+                }
+            }else{
+                cell.imageView.image = UIImage.init(named: "default")
+            }
         }
         
         cell.layer.cornerRadius = 10
