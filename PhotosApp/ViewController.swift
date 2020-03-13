@@ -76,7 +76,7 @@ class AsyncImageView:UIImageView {
     }
     func loadImageWithURl(url:String){
         
-        let sourceURL = url.components(separatedBy: "https://")
+        let sourceURL = url.components(separatedBy: "https://homepages.cae.wisc.edu/~ece533/images/")
         
         
         if let image = getImageFromCache(fileUrl: sourceURL[1]){
