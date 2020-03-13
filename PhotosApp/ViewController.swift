@@ -117,6 +117,7 @@ class AsyncImageView:UIImageView {
         var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         
         path.appendPathComponent("\(sourceUrl)")
+        fileManager.createFile(atPath:path.path , contents: nil, attributes: .none)
         
         do {
             try data.write(to: path, options: .atomic)
