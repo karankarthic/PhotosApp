@@ -12,12 +12,32 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
     
     
     var collectionView : UICollectionView? = nil
+    let leftbarbutton = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: nil)
+    let rightBarButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addPhotoOrFolder))
+    var urlArray:[URL] = []
+    var previousUrlArrays:[URL] = []
+//    ["https://homepages.cae.wisc.edu/~ece533/images/airplane.png","https://homepages.cae.wisc.edu/~ece533/images/arctichare.png","https://homepages.cae.wisc.edu/~ece533/images/baboon.png","https://homepages.cae.wisc.edu/~ece533/images/monarch.png","https://homepages.cae.wisc.edu/~ece533/images/sails.png","https://homepages.cae.wisc.edu/~ece533/images/tulips.png","https://homepages.cae.wisc.edu/~ece533/images/watch.png","https://homepages.cae.wisc.edu/~ece533/images/serrano.png","https://homepages.cae.wisc.edu/~ece533/images/fruits.png","https://homepages.cae.wisc.edu/~ece533/images/goldhill.png","https://homepages.cae.wisc.edu/~ece533/images/lena.png","https://homepages.cae.wisc.edu/~ece533/images/pool.png"]
+//
     
-    let urlArray:[String] = ["https://homepages.cae.wisc.edu/~ece533/images/airplane.png","https://homepages.cae.wisc.edu/~ece533/images/arctichare.png","https://homepages.cae.wisc.edu/~ece533/images/baboon.png","https://homepages.cae.wisc.edu/~ece533/images/monarch.png","https://homepages.cae.wisc.edu/~ece533/images/sails.png","https://homepages.cae.wisc.edu/~ece533/images/tulips.png","https://homepages.cae.wisc.edu/~ece533/images/watch.png","https://homepages.cae.wisc.edu/~ece533/images/serrano.png","https://homepages.cae.wisc.edu/~ece533/images/fruits.png","https://homepages.cae.wisc.edu/~ece533/images/goldhill.png","https://homepages.cae.wisc.edu/~ece533/images/lena.png","https://homepages.cae.wisc.edu/~ece533/images/pool.png"]
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        do {
+            let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil)
+            urlArray = fileURLs
+           
+            
+        } catch {
+            print("Error while enumeration")
+        }
+        
+        self.navigationItem.title = "Photos"
+        
+        self.navigationItem.rightBarButtonItem = rightBarButton
         
         let flowLayout = UICollectionViewFlowLayout()
         flowLayout.sectionInset = .init(top: 20, left: 30, bottom: 5, right: 30)
@@ -48,105 +68,83 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
         return cell
     }
     
-}
-
-class PhotoCell:UICollectionViewCell
-{
-    
-    lazy var imageView = AsyncImageView(frame: self.contentView.frame)
-    
-    override init(frame: CGRect) {
-        super.init(frame:frame)
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let cell = collectionView.cellForItem(at: indexPath) as! PhotoCell
         
-        self.contentView.addSubview(imageView)
-        imageView.layer.cornerRadius = 10
-        imageView.clipsToBounds = true
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-}
-
-class AsyncImageView:UIImageView {
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-    }
-    func loadImageWithURl(url:String){
-        
-        let sourceURL = url.components(separatedBy: "https://homepages.cae.wisc.edu/~ece533/images/")
-        
-        
-        if let image = getImageFromCache(fileUrl: sourceURL[1]){
-            DispatchQueue.main.async {
+        if cell.isPhoto{
+            if let image  = cell.imageView.image {
                 
-                self.image = image
+                let vc = DetailViewController(image: image)
                 
+                let navVc = UINavigationController(rootViewController: vc)
+                
+                self.present(navVc, animated: true, completion: nil)
+            }
+        }else{
+            previousUrlArrays = urlArray
+            let fileManager = FileManager.default
+            let documentsURL = urlArray[indexPath.row]
+            do {
+                let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil)
+                urlArray = fileURLs
+                
+                
+            } catch {
+                print("Error while enumeration")
             }
             
-            return
-        }
-        
-        DispatchQueue.global().async {
-            if let url = URL.init(string: url),let data = try? Data(contentsOf: url),let image = UIImage(data: data) {
-                
-                self.storeToDB(sourceUrl: sourceURL[1], data: data)
-                
-                DispatchQueue.main.async {
-                    
-                    self.image = image
-                    
-                }
-            }else{
-                DispatchQueue.main.async {
-
-                    self.image = UIImage.init(named: "default")
-                    
-                }
-                
-            }
-        }
-        
-    }
-    
-    func storeToDB(sourceUrl:String,data:Data){
-        
-        let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        
-        path.appendPathComponent("\(sourceUrl)")
-        fileManager.createFile(atPath:path.path , contents: nil, attributes: .none)
-        
-        do {
-            try data.write(to: path, options: .atomic)
-            print("hi download")
-        } catch {
-            print(error.localizedDescription)
-        }
-        
-        
-    }
-    
-    func getImageFromCache(fileUrl:String) -> UIImage?{
-        
-        let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        path.appendPathComponent("\(fileUrl)")
-        
-        if let data = try? Data(contentsOf: path),let image = UIImage(data: data){
-            
-            return image
+             self.collectionView?.reloadData()
+            self.navigationItem.rightBarButtonItem = nil
+            self.navigationItem.leftBarButtonItem = leftbarbutton
             
         }
-        
-        return nil
-        
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
 
+extension ViewController{
+    
+    @objc func addPhotoOrFolder(){
+        
+        let actionSheet = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        
+        let addFolder = UIAlertAction(title: "add Folder", style: .default) { (_) in
+            actionSheet.dismiss(animated: true) {
+                self.getFolderInput()
+            }
+        }
+
+        actionSheet.addAction(addFolder)
+        
+            self.present(actionSheet, animated: true, completion: nil)
+   
+    }
+    
+    func getFolderInput(){
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
+        
+        alert.addTextField { (textField) in
+            textField.placeholder = "enter folder name"
+        }
+        
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak alert] (_) in
+            guard let textFieldText = alert?.textFields?[0].text else{return}
+            self.createFolder(folderName:textFieldText)
+        }))
+        
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func createFolder(folderName:String){
+        
+        let fileManager = FileManager.default
+        let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let filePath =  documentDirectory.appendingPathComponent(folderName)
+        if !fileManager.fileExists(atPath: filePath.path) {
+            do {
+                try fileManager.createDirectory(atPath: filePath.path, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                print("Error while creating")
+            }
+        }
+    }
+}
