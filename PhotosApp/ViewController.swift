@@ -12,10 +12,11 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
     
     
     var collectionView : UICollectionView? = nil
-    let leftbarbutton = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: nil)
-    let rightBarButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addPhotoOrFolder))
+    let leftbarbutton = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: #selector(backToParentDirectory))
+    var lastpathcomponent = ""
+    var latestPathURl:URL? = nil
+    let fileManager = FileManager.default
     var urlArray:[URL] = []
-    var previousUrlArrays:[URL] = []
 //    ["https://homepages.cae.wisc.edu/~ece533/images/airplane.png","https://homepages.cae.wisc.edu/~ece533/images/arctichare.png","https://homepages.cae.wisc.edu/~ece533/images/baboon.png","https://homepages.cae.wisc.edu/~ece533/images/monarch.png","https://homepages.cae.wisc.edu/~ece533/images/sails.png","https://homepages.cae.wisc.edu/~ece533/images/tulips.png","https://homepages.cae.wisc.edu/~ece533/images/watch.png","https://homepages.cae.wisc.edu/~ece533/images/serrano.png","https://homepages.cae.wisc.edu/~ece533/images/fruits.png","https://homepages.cae.wisc.edu/~ece533/images/goldhill.png","https://homepages.cae.wisc.edu/~ece533/images/lena.png","https://homepages.cae.wisc.edu/~ece533/images/pool.png"]
 //
     
@@ -27,17 +28,18 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         do {
-            let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil)
+            let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
             urlArray = fileURLs
            
             
         } catch {
             print("Error while enumeration")
         }
-        
+        latestPathURl = documentsURL
         self.navigationItem.title = "Photos"
         
-        self.navigationItem.rightBarButtonItem = rightBarButton
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addPhotoOrFolder))
+        
         
         let flowLayout = UICollectionViewFlowLayout()
         flowLayout.sectionInset = .init(top: 20, left: 30, bottom: 5, right: 30)
@@ -45,7 +47,8 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
         flowLayout.minimumLineSpacing = 20
         flowLayout.scrollDirection = .vertical
         collectionView = UICollectionView(frame: self.view.bounds, collectionViewLayout: flowLayout)
-        collectionView?.register(PhotoCell.self, forCellWithReuseIdentifier: "collectionCell")
+        collectionView?.register(PhotoCell.self, forCellWithReuseIdentifier: "PhotoCell")
+        collectionView?.register(FolderCell.self, forCellWithReuseIdentifier: "FolderCell")
         collectionView?.backgroundColor = UIColor.black
         
         self.view.addSubview(collectionView ?? UICollectionView())
@@ -61,17 +64,29 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell
     {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "collectionCell", for: indexPath) as! PhotoCell
-        cell.backgroundColor = UIColor.gray
-        cell.imageView.loadImageWithURl(url: self.urlArray[indexPath.row])
-        cell.layer.cornerRadius = 10
-        return cell
+        let url = self.urlArray[indexPath.row]
+        if url.pathExtension != "" {
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCell", for: indexPath) as! PhotoCell
+            cell.backgroundColor = UIColor.gray
+            cell.imageView.loadImageWithURl(url: url)
+            cell.layer.cornerRadius = 10
+            return cell
+        }
+        else{
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "FolderCell", for: indexPath) as! FolderCell
+            cell.backgroundColor = UIColor.gray
+            cell.nameOfFolderView.text = url.lastPathComponent
+            cell.layer.cornerRadius = 10
+            return cell
+            
+        }
+       
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let cell = collectionView.cellForItem(at: indexPath) as! PhotoCell
-        
-        if cell.isPhoto{
+       if let cell = collectionView.cellForItem(at: indexPath) as? PhotoCell
+        {
             if let image  = cell.imageView.image {
                 
                 let vc = DetailViewController(image: image)
@@ -80,13 +95,15 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
                 
                 self.present(navVc, animated: true, completion: nil)
             }
-        }else{
-            previousUrlArrays = urlArray
-            let fileManager = FileManager.default
+        }
+       else{
+        
             let documentsURL = urlArray[indexPath.row]
+            
             do {
                 let fileURLs = try fileManager.contentsOfDirectory(at: documentsURL, includingPropertiesForKeys: nil)
                 urlArray = fileURLs
+                latestPathURl = documentsURL
                 
                 
             } catch {
@@ -94,8 +111,8 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
             }
             
              self.collectionView?.reloadData()
-            self.navigationItem.rightBarButtonItem = nil
-            self.navigationItem.leftBarButtonItem = leftbarbutton
+
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: #selector(backToParentDirectory))
             
         }
     }
@@ -112,15 +129,30 @@ extension ViewController{
                 self.getFolderInput()
             }
         }
+        
+        let addfile = UIAlertAction(title: "add Image", style: .default) { (_) in
+            actionSheet.dismiss(animated: true) {
+               let picker = UIImagePickerController()
+                picker.allowsEditing = true
+                picker.delegate = self
+                self.present(picker, animated: true)
+            }
+        }
 
+        let cancel = UIAlertAction(title: "cancel", style: .cancel) { (_) in
+            
+        }
+        
         actionSheet.addAction(addFolder)
+        actionSheet.addAction(addfile)
+        actionSheet.addAction(cancel)
         
             self.present(actionSheet, animated: true, completion: nil)
    
     }
     
     func getFolderInput(){
-        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
+        let alert = UIAlertController(title: nil, message: "Name Of Folder", preferredStyle: .alert)
         
         alert.addTextField { (textField) in
             textField.placeholder = "enter folder name"
@@ -129,6 +161,7 @@ extension ViewController{
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak alert] (_) in
             guard let textFieldText = alert?.textFields?[0].text else{return}
             self.createFolder(folderName:textFieldText)
+            self.collectionView?.reloadData()
         }))
         
         self.present(alert, animated: true, completion: nil)
@@ -136,7 +169,18 @@ extension ViewController{
     
     func createFolder(folderName:String){
         
-        let fileManager = FileManager.default
+        if let url = latestPathURl {
+            let filePath =  url.appendingPathComponent(folderName)
+            if !fileManager.fileExists(atPath: filePath.path) {
+                do {
+                    try fileManager.createDirectory(atPath: filePath.path, withIntermediateDirectories: true, attributes: nil)
+                } catch {
+                    print("Error while creating")
+                }
+            }
+            return
+        }
+
         let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         let filePath =  documentDirectory.appendingPathComponent(folderName)
         if !fileManager.fileExists(atPath: filePath.path) {
@@ -147,4 +191,79 @@ extension ViewController{
             }
         }
     }
+    
+    @objc func backToParentDirectory(){
+        
+        guard let tempUrlString = latestPathURl?.absoluteString else {return}
+        let temp = tempUrlString.components(separatedBy: "/")
+        var urlString = ""
+        
+        for (index,component) in temp.enumerated()
+        {
+            if index == ((temp.count - 1) - 1)
+            {
+                break
+            }
+            urlString.append(component)
+            urlString.append("/")
+        }
+        
+        guard let url = URL.init(string: urlString) else{return}
+        
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        
+        do {
+            let fileURLs = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+            urlArray = fileURLs
+            latestPathURl = url
+            
+        } catch {
+            print("Error while enumeration")
+        }
+        
+        if url == documentsURL{
+            self.navigationItem.leftBarButtonItem = nil
+            
+            latestPathURl = nil
+        }
+        
+        self.collectionView?.reloadData()
+        
+    }
+    
+}
+
+extension ViewController:UIImagePickerControllerDelegate,UINavigationControllerDelegate {
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        guard let image = info[.editedImage] as? UIImage else { return }
+        guard let url = info[.imageURL] as? URL else { return }
+        
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
+        
+        let fileName = url.lastPathComponent
+         guard let pathUrl = latestPathURl else { return }
+        
+          let filePath =  pathUrl.appendingPathComponent(fileName)
+        
+       
+        do {
+            try imageData.write(to: filePath, options: .atomic)
+        } catch {
+            print("Error while creating")
+        }
+    
+         dismiss(animated: true)
+        
+        do {
+            let fileURLs = try fileManager.contentsOfDirectory(at: pathUrl, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+            urlArray = fileURLs
+            
+        } catch {
+            print("Error while enumeration")
+        }
+        
+        self.collectionView?.reloadData()
+    }
+    
 }

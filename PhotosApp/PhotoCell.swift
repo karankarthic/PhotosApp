@@ -12,7 +12,7 @@ class PhotoCell:UICollectionViewCell
 {
     
     lazy var imageView = AsyncImageView(frame: self.contentView.frame)
-    var isPhoto = true
+   // var isPhoto = true
     
     override init(frame: CGRect) {
         super.init(frame:frame)
@@ -20,7 +20,7 @@ class PhotoCell:UICollectionViewCell
         self.contentView.addSubview(imageView)
         imageView.layer.cornerRadius = 10
         imageView.clipsToBounds = true
-        isPhoto = imageView.isPhoto
+    
     }
     
     required init?(coder: NSCoder) {
@@ -29,96 +29,47 @@ class PhotoCell:UICollectionViewCell
     
 }
 
-class AsyncImageView:UIImageView {
-    
-    var isPhoto = true
+class FolderCell:UICollectionViewCell
+{
+    lazy var imageView : UIImageView = {
+        var imageView = UIImageView()
+        imageView.layer.cornerRadius = 10
+        imageView.clipsToBounds = true
+        imageView.image = UIImage(named: "folder")
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+        
+    }()
+    lazy var nameOfFolderView : UILabel = {
+        var nameOfFolderView = UILabel()
+        nameOfFolderView.layer.cornerRadius = 10
+        nameOfFolderView.textAlignment = .center
+        nameOfFolderView.translatesAutoresizingMaskIntoConstraints = false
+        return nameOfFolderView
+    }()
+    //var isPhoto = false
     
     override init(frame: CGRect) {
-        super.init(frame: frame)
-    }
-    func loadImageWithURl(url:URL){
+        super.init(frame:frame)
         
-        let sourceURL = url.lastPathComponent
+        self.contentView.addSubview(imageView)
+        self.contentView.addSubview(nameOfFolderView)
         
-        if sourceURL.hasSuffix(".png") == false,sourceURL.hasSuffix(".jpg") == false{
-            DispatchQueue.main.async {
-                
-                self.image = UIImage(named: "folder")
-                
-            }
-            isPhoto = false
-            return
-        }
- 
-        if let image = getImageFromCache(fileUrl: sourceURL){
-            DispatchQueue.main.async {
-                
-                self.image = image
-                
-            }
-            
-            return
-        }
+        NSLayoutConstraint.activate([ imageView.topAnchor.constraint(equalTo: self.contentView.topAnchor),
+                                      imageView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
+                                      imageView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
         
-        DispatchQueue.global().async {
-            if let data = try? Data(contentsOf: url),let image = UIImage(data: data) {
-                
-                self.storeToDB(sourceUrl: sourceURL, data: data)
-                
-                DispatchQueue.main.async {
-                    
-                    self.image = image
-                    
-                }
-            }else{
-                DispatchQueue.main.async {
-
-                    self.image = UIImage.init(named: "default")
-                    
-                }
-                
-            }
-        }
+                                      nameOfFolderView.topAnchor.constraint(equalTo: self.imageView.bottomAnchor),
+                                      nameOfFolderView.leadingAnchor.constraint(equalTo: self.contentView.leadingAnchor),
+                                      nameOfFolderView.trailingAnchor.constraint(equalTo: self.contentView.trailingAnchor),
+                                      nameOfFolderView.bottomAnchor.constraint(equalTo: self.contentView.bottomAnchor),
+                                      nameOfFolderView.heightAnchor.constraint(equalToConstant: 16)])
         
-    }
     
-    func storeToDB(sourceUrl:String,data:Data){
-        
-        let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        
-        path.appendPathComponent("\(sourceUrl)")
-        fileManager.createFile(atPath:path.path , contents: nil, attributes: .none)
-        
-        do {
-            try data.write(to: path, options: .atomic)
-            print("hi download")
-        } catch {
-            print(error.localizedDescription)
-        }
-        
-        
-    }
-    
-    func getImageFromCache(fileUrl:String) -> UIImage?{
-        
-        let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        path.appendPathComponent("\(fileUrl)")
-        
-        if let data = try? Data(contentsOf: path),let image = UIImage(data: data){
-            
-            return image
-            
-        }
-        
-        return nil
-        
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 }
-
 
