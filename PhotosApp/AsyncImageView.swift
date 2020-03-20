@@ -55,7 +55,7 @@ class AsyncImageView:UIImageView {
     private func storeToDB(sourceUrl:String,data:Data){
         
         let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        var path = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
         
         path.appendPathComponent("\(sourceUrl)")
         fileManager.createFile(atPath:path.path , contents: nil, attributes: .none)

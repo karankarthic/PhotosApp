@@ -212,22 +212,13 @@ extension ViewController{
         
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
         
-        do {
-            let fileURLs = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
-            urlArray = fileURLs
-            latestPathURl = url
-            
-        } catch {
-            print("Error while enumeration")
-        }
-        
+        reloadData(url: url, isToSetLatestPath: true)
+
         if url == documentsURL{
             self.navigationItem.leftBarButtonItem = nil
             
             latestPathURl = nil
         }
-        
-        self.collectionView?.reloadData()
         
     }
     
@@ -255,15 +246,31 @@ extension ViewController:UIImagePickerControllerDelegate,UINavigationControllerD
     
          dismiss(animated: true)
         
+        reloadData(url: pathUrl, isToSetLatestPath: false)
+        
+    }
+    
+    
+    func reloadData(url:URL,isToSetLatestPath:Bool)
+    {
+        
         do {
-            let fileURLs = try fileManager.contentsOfDirectory(at: pathUrl, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
+            let fileURLs = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
             urlArray = fileURLs
+            
+            if isToSetLatestPath {
+                
+                 latestPathURl = url
+                
+            }
             
         } catch {
             print("Error while enumeration")
         }
         
         self.collectionView?.reloadData()
+        
+        
     }
     
 }
