@@ -73,7 +73,7 @@ class AsyncImageView:UIImageView {
     private func getImageFromCache(fileUrl:String) -> UIImage?{
         
         let fileManager = FileManager.default
-        var path = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        var path = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
         path.appendPathComponent("\(fileUrl)")
         
         if let data = try? Data(contentsOf: path),let image = UIImage(data: data){
