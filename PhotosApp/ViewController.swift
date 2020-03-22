@@ -161,7 +161,8 @@ extension ViewController{
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { [weak alert] (_) in
             guard let textFieldText = alert?.textFields?[0].text else{return}
             self.createFolder(folderName:textFieldText)
-            self.collectionView?.reloadData()
+            guard let url = self.latestPathURl else{return}
+            self.reloadData(url: url, isToSetLatestPath: false)
         }))
         
         self.present(alert, animated: true, completion: nil)
